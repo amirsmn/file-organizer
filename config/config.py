@@ -21,36 +21,6 @@ class Config:
         self.config_file = config_file
         self.configs = self.get_configs()
 
-    @property
-    def config_file(self) -> str:
-        """
-        Returns the path to the configuration file.
-
-        :returns: The path to the configuration file.
-        :rtype: str
-        """
-        return self._config_file
-
-    @config_file.setter
-    def config_file(self, file: str) -> None:
-        """
-        Sets the configuration file path after validating the file type.
-
-        :param file: The path to the configuration file.
-        :type file: str
-
-        :raises TypeError: If `file` is not a string.
-        :raises ValueError: If the file is not a JSON file.
-        """
-        if not isinstance(file, str):
-            raise TypeError("file should be an `str` object")
-
-        if file.endswith(".json"):
-            self._config_file = file
-        else:
-            logger.error(f"Config file '{file}' should be a JSON file")
-            raise ValueError(f"Invalid file type: {file}. Only '.json' files are allowed")
-
     def get_configs(self) -> Dict[str, Union[Dict[str, str], List[str], bool, str]]:
         """
         Loads the configuration data from the JSON file.
@@ -147,7 +117,6 @@ class Config:
 
             with open(self.config_file, "w") as config:
                 json.dump(config_data, config, indent=4)
-            logger.info("New configurations have been set successfully")
 
         except FileNotFoundError as e:
             logger.error(f"Configuration file '{self.config_file}' not found.")
@@ -155,3 +124,33 @@ class Config:
         except TypeError as e:
             logger.error(e)
             raise
+
+    @property
+    def config_file(self) -> str:
+        """
+        Returns the path to the configuration file.
+
+        :returns: The path to the configuration file.
+        :rtype: str
+        """
+        return self._config_file
+
+    @config_file.setter
+    def config_file(self, file: str) -> None:
+        """
+        Sets the configuration file path after validating the file type.
+
+        :param file: The path to the configuration file.
+        :type file: str
+
+        :raises TypeError: If `file` is not a string.
+        :raises ValueError: If the file is not a JSON file.
+        """
+        if not isinstance(file, str):
+            raise TypeError("file should be an `str` object")
+
+        if file.endswith(".json"):
+            self._config_file = file
+        else:
+            logger.error(f"Config file '{file}' should be a JSON file")
+            raise ValueError(f"Invalid file type: {file}. Only '.json' files are allowed")

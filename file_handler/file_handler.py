@@ -27,40 +27,6 @@ class FileHandler:
         """
         self.folder_path = folder_path
 
-    @property
-    def folder_path(self) -> str:
-        """
-        Get the root folder path.
-
-        :returns: The absolute path of the root folder as a string.
-        :rtype: str
-        """
-        return str(self._folder_path)
-
-    @folder_path.setter
-    def folder_path(self, folder_path: Union[str, pathlib.Path]) -> None:
-        """
-        Set the root folder path.
-
-        The provided path will be resolved to an absolute path before being stored.
-
-        :param folder_path: The path to the root folder.
-        :type folder_path: Union[str, pathlib.Path]
-
-        :raises TypeError: If folder_path is not a string or pathlib.Path object.
-        :raises NotADirectoryError: If folder_path does not exist or is not a directory.
-        """
-        if not isinstance(folder_path, (str, pathlib.Path)):
-            raise TypeError("folder_path should be a `str` or `pathlib.Path` object")
-
-        folder_path = pathlib.Path(folder_path)
-        if folder_path.is_dir():
-            self._folder_path = folder_path.resolve()
-            logger.info(f"Folder path set to: {folder_path}")
-        else:
-            logger.error(f"Invalid folder path provided: {folder_path}")
-            raise NotADirectoryError(f"No such folder path: {folder_path}")
-
     def get_files(self) -> Generator[pathlib.Path, None, None]:
         """
         Retrieve all non-hidden files in the root folder.
@@ -87,11 +53,9 @@ class FileHandler:
 
         target_path = self._folder_path / folder_name
         if target_path.exists() and target_path.is_file():
-            logger.info(f"Folder or file with '{folder_name}' name already exists")
             raise FileExistsError(f"A file with the name '{folder_name}' already exists")
 
         target_path.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Successfully created folder: '{folder_name}' at path '{target_path}'")
 
     def move_file(
             self,
@@ -138,7 +102,37 @@ class FileHandler:
 
         try:
             file_path.rename(target_file_path)
-            logger.info(f"Moved '{file_path}' to '{target_file_path}'")
         except PermissionError as e:
             logger.error(f"Permission error when moving '{file_path.name}': '{e}'")
             raise
+
+    @property
+    def folder_path(self) -> str:
+        """
+        Get the root folder path.
+
+        :returns: The absolute path of the root folder as a string.
+        :rtype: str
+        """
+        return str(self._folder_path)
+
+    @folder_path.setter
+    def folder_path(self, folder_path: Union[str, pathlib.Path]) -> None:
+        """
+        Set the root folder path. The provided path will be resolved to an absolute path before being stored.
+
+        :param folder_path: The path to the root folder.
+        :type folder_path: Union[str, pathlib.Path]
+
+        :raises TypeError: If folder_path is not a string or pathlib.Path object.
+        :raises NotADirectoryError: If folder_path does not exist or is not a directory.
+        """
+        if not isinstance(folder_path, (str, pathlib.Path)):
+            raise TypeError("folder_path should be a `str` or `pathlib.Path` object")
+
+        folder_path = pathlib.Path(folder_path)
+        if folder_path.is_dir():
+            self._folder_path = folder_path.resolve()
+        else:
+            logger.error(f"Invalid folder path provided: {folder_path}")
+            raise NotADirectoryError(f"No such folder path: {folder_path}")

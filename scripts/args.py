@@ -1,8 +1,8 @@
 import tkinter as tk
-import tkinter.filedialog
 import argparse
 import pathlib
 import logging
+from tkinter import filedialog
 from typing import List
 
 
@@ -12,8 +12,6 @@ logger = logging.getLogger(__name__)
 def parse_args() -> argparse.Namespace:
     """
     Parse command-line arguments.
-
-    This function handles input from the command line, allowing users to change the default settings.
 
     :returns: Parsed command-line arguments as an argparse.Namespace object.
     :rtype: argparse.Namespace
@@ -56,25 +54,23 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def get_folders() -> List[pathlib.Path]:
+def get_folders() -> List[str]:
     """
-    Get a list of folders selected by the user.
-
-    This function opens a file dialog to allow the user to select multiple folders.
-    The user can select up to 20 folders.
-
-    :raises ValueError: If no folder is selected by the user.
+    Get a list of folders selected by the user via file dialog. The user can select up to 20 folders.
 
     :returns: A list of selected folder paths.
-    :rtype: List[pathlib.Path]
+    :rtype: List[str]
+
+    :raises ValueError: If no folder is selected by the user.
     """
-    tk.Tk().withdraw()
+    tk_root = tk.Tk()
+    tk_root.withdraw()
 
     folder_paths = []
     last_directory = pathlib.Path.home()
 
     while len(folder_paths) < 20:
-        folder_path = tk.filedialog.askdirectory(title="Select a folder", initialdir=last_directory)
+        folder_path = filedialog.askdirectory(title="Select a folder", initialdir=last_directory)
 
         if not folder_path:
             break
@@ -83,6 +79,8 @@ def get_folders() -> List[pathlib.Path]:
 
         folder_paths.append(folder_path)
         last_directory = pathlib.Path(folder_path).parent
+
+    tk_root.destroy()
 
     if not folder_paths:
         logger.error("There is no selected folder to organize")
