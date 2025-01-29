@@ -1,84 +1,67 @@
 import logging
 from pathlib import Path
-from typing import Dict, Union, List
 from console_manager.console_manager import ConsoleManager
 from file_handler.file_handler import FileHandler
 from scripts.args import parse_args, get_folders
 from config.config import Config
 
 
-def organize_files(
-        configs: Dict[str, Union[Dict[str, str], List[str], bool, str]],
-        console: ConsoleManager,
-        logger: logging.Logger
-) -> None:
+def organize_files() -> None:
     """
     Organize files in specified folders based on their extensions.
-
-    :param configs: A dictionary containing configuration settings:
-        - folder_paths (list[str, pathlib.Path]): List of folder paths to organize.
-        - extension_to_folder (dict[str, str]): Mapping of file extensions to target folders.
-        - keep_duplicates (bool): Indicates whether to keep duplicate files.
-    :param console: An instance of ConsoleManager for printing messages to the console.
-    :param logger: A logging.Logger instance for logging information and errors.
-
-    :raises TypeError: If a path is not a string or pathlib.Path object.
-    :raises FileExistsError: If a target folder already exists.
-    :raises FileNotFoundError: If a specified file path does not exist.
-    :raises NotADirectoryError: If a target folder does not exist or is not a directory.
-    :raises PermissionError: If a permission error occurs during file movement.
     """
     handler = FileHandler(folder_path=Path(""))
 
-    folders_to_organize = configs["folder_paths"]
-    extension_to_folder = configs["extension_to_folder"]
-    keep_duplicates = configs["keep_duplicates"]
-
-    for folder_path in folders_to_organize:
+    for folder_path in configs["folder_paths"]:
         handler.folder_path = Path(folder_path)
 
-        console.print(f"--- Starting file organization for '{folder_path}'... ---")
+        console.print(f"--- Starting file organization for '{folder_path}' ---")
         logger.info(f"Starting file organization for '{folder_path}'")
 
         for file in handler.get_files():
-            logger.info(f"Processing file: '{file.name}'")
-            file_extension = file.suffix
-
-            target_folder = extension_to_folder.get(file_extension, "OTHERS")
-            logger.info(f"File classified as - {target_folder.split('/')[0]}")
+            target_folder = configs["extension_to_folder"].get(file.suffix, "OTHERS")
 
             try:
                 handler.create_folder(folder_name=target_folder)
-                handler.move_file(file=file, folder_name=target_folder, keep_dup=keep_duplicates)
+                handler.move_file(file=file, folder_name=target_folder, keep_dup=configs["keep_duplicates"])
                 console.print(msg=f"'{file.name}' moved to '{target_folder}' folder", flag="success")
+
             except (TypeError, FileExistsError, FileNotFoundError, NotADirectoryError, PermissionError) as e:
-                console.print(
-                    msg=f"[{e.__class__.__name__}] - {e}\nFailed to move '{file.name}' to '{target_folder}' folder",
-                    flag="failed"
-                )
+                console.print(msg=f"Failed to move '{file.name}' to '{target_folder}' folder", flag="failed")
                 logger.warning(f"Error processing '{file.name}': {e}")
 
         console.print(f"--- File organization completed successfully for '{folder_path}' ---")
         logger.info(f"File organization completed successfully for '{folder_path}'")
 
-    logger.info("File organization completed successfully for all folders")
 
-
-def filter_messages(console: ConsoleManager) -> None:
+def filter_messages(max_cycle: int = 5, max_retry: int = 3) -> None:
     """
-    Filters messages based on their status level.
+    Filter and display messages by their status.
 
-    :param console: An instance of ConsoleManager for printing messages to the console.
+    :param max_cycle: The maximum number of interaction cycles (prompts).
+    :type max_cycle: int
+    :param max_retry: The maximum number of retries allowed for invalid inputs
+    :type max_retry: int
+
+    :raises ValueError: If `max_cycle` or `max_retry` are not integers.
     """
-    while True:
-        filter_value = input(
-            "You can filter messages by their status ('success', 'failed', 'all', 'cancel'): "
-        ).lower()
+    if not (isinstance(max_cycle, int) and isinstance(max_retry, int)):
+        raise ValueError("`max_cycle` and `max_retry` must be integers")
 
-        if filter_value not in ("success", "failed", "all"):
+    max_cycle = 0 if max_cycle < 0 else max_cycle
+    max_retry = 1 if max_retry <= 0 else max_retry
+
+    while max_cycle:
+        max_cycle -= 1
+        flag = input("Filter messages by status ('success', 'failed', 'all', 'cancel'): ").lower()
+
+        if flag == "cancel" or not max_retry:
             break
 
-        console.filter_by_flag(filter_value)
+        try:
+            console.filter_by_flag(flag)
+        except ValueError:
+            max_retry -= 1
 
 
 def create_logger() -> logging.Logger:
@@ -86,15 +69,16 @@ def create_logger() -> logging.Logger:
     Create a logger instance for logging information and errors.
 
     :return: A logging.Logger instance
+    :rtype: logging.Logger
     """
     logging.basicConfig(
-        level=logging.INFO,
+        filename="file_organizer.log",
+        level=logging.WARNING,
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
-        handlers=[logging.FileHandler("file_organizer.log")]
     )
 
-    return logging.getLogger("main")
+    return logging.getLogger(__name__)
 
 
 if __name__ == "__main__":
@@ -102,21 +86,18 @@ if __name__ == "__main__":
         logger = create_logger()
 
         args = parse_args()
-        folder_paths = get_folders()
-
         config = Config()
         config.set_configs(
-            folder_paths=folder_paths,
+            folder_paths=get_folders(),
             extension_to_folder=args.ext,
             keep_duplicates=args.dup,
             status_level=args.status
         )
         configs = config.configs
-
         console = ConsoleManager(output_level=configs["status_level"])
 
-        organize_files(configs, console, logger)
-        filter_messages(console)
+        organize_files()
+        filter_messages()
 
     except Exception as e:
         logger.exception(f"An unexpected error occurred: {e}")
